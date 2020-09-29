@@ -3,7 +3,7 @@
     <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
 
       <div class="title-container">
-        <h3 class="title">Login Form</h3>
+        <h3 class="title">欢迎登录XXX后台</h3>
       </div>
 
       <el-form-item prop="username">
@@ -12,8 +12,9 @@
         </span>
         <el-input
           ref="username"
+          maxlength="18"
           v-model="loginForm.username"
-          placeholder="Username"
+          placeholder="用户名"
           name="username"
           type="text"
           tabindex="1"
@@ -28,9 +29,10 @@
         <el-input
           :key="passwordType"
           ref="password"
+          maxlength="32"
           v-model="loginForm.password"
           :type="passwordType"
-          placeholder="Password"
+          placeholder="密码"
           name="password"
           tabindex="2"
           auto-complete="on"
@@ -41,12 +43,26 @@
         </span>
       </el-form-item>
 
+      <el-form-item prop="code" class="code">
+        <span class="svg-container">
+          <svg-icon icon-class="password" />
+        </span>
+        <el-input
+          ref="code"
+          maxlength="6"
+          v-model="loginForm.code"
+          type="text"
+          placeholder="图形码"
+          name="code"
+          tabindex="3"
+          auto-complete="on"
+          @keyup.enter.native="handleLogin"
+        />
+      </el-form-item>
+        <span class="auth_code" @click="getAuthCode()" v-if="authCode != ''">
+          <img :src="authCode" style="width:150%;height:150%;border-radius: 5px;margin-left: 10%;">
+        </span>
       <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">Login</el-button>
-
-      <div class="tips">
-        <span style="margin-right:20px;">username: admin</span>
-        <span> password: any</span>
-      </div>
 
     </el-form>
   </div>
@@ -54,37 +70,53 @@
 
 <script>
 import { validUsername } from '@/utils/validate'
+import { getAuthCode,login } from '@/api/user'
+import { getToken, setToken, removeToken } from '@/utils/auth'
 
 export default {
   name: 'Login',
   data() {
     const validateUsername = (rule, value, callback) => {
-      if (!validUsername(value)) {
-        callback(new Error('Please enter the correct user name'))
+      if (value == '') {
+        callback(new Error('请输入用户名'))
       } else {
         callback()
       }
     }
     const validatePassword = (rule, value, callback) => {
       if (value.length < 6) {
-        callback(new Error('The password can not be less than 6 digits'))
+        callback(new Error('密码太短'))
       } else {
         callback()
       }
     }
+    const validateCode = (rule,value,callback) =>{
+      if(value == ''){
+        callback(new Error('请输入验证码'))
+      }else{
+        callback()
+      }
+    }
     return {
+      authCode: '',
       loginForm: {
         username: 'admin',
-        password: '111111'
+        password: '123456',
+        code:'',
+        key:''
       },
       loginRules: {
         username: [{ required: true, trigger: 'blur', validator: validateUsername }],
-        password: [{ required: true, trigger: 'blur', validator: validatePassword }]
+        password: [{ required: true, trigger: 'blur', validator: validatePassword }],
+        code: [{ required: true, trigger: 'blur', validator: validateCode}]
       },
       loading: false,
       passwordType: 'password',
       redirect: undefined
     }
+  },
+   created() {
+    this.getAuthCode()
   },
   watch: {
     $route: {
@@ -95,6 +127,13 @@ export default {
     }
   },
   methods: {
+    getAuthCode(){
+     getAuthCode().then(response => {
+        this.authCode = response.data.pic
+        this.loginForm.key = response.data.picKey
+      })
+
+    },
     showPwd() {
       if (this.passwordType === 'password') {
         this.passwordType = ''
@@ -107,7 +146,7 @@ export default {
     },
     handleLogin() {
       this.$refs.loginForm.validate(valid => {
-        if (valid) {
+          if (valid) {
           this.loading = true
           this.$store.dispatch('user/login', this.loginForm).then(() => {
             this.$router.push({ path: this.redirect || '/' })
@@ -130,8 +169,8 @@ export default {
 /* Detail see https://github.com/PanJiaChen/vue-element-admin/pull/927 */
 
 $bg:#283443;
-$light_gray:#fff;
-$cursor: #fff;
+$light_gray:#606266;
+$cursor: #606266;
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
   .login-container .el-input input {
@@ -143,39 +182,48 @@ $cursor: #fff;
 .login-container {
   .el-input {
     display: inline-block;
-    height: 47px;
     width: 85%;
-
     input {
-      background: transparent;
+       background: transparent;
       border: 0px;
-      -webkit-appearance: none;
+       -webkit-appearance: none;
       border-radius: 0px;
       padding: 12px 5px 12px 15px;
-      color: $light_gray;
+       color: $light_gray;
       height: 47px;
       caret-color: $cursor;
 
       &:-webkit-autofill {
-        box-shadow: 0 0 0px 1000px $bg inset !important;
-        -webkit-text-fill-color: $cursor !important;
+        box-shadow: 0 0 0px 1000px #fff inset !important;
+        -webkit-text-fill-color:  $bg !important;
       }
     }
   }
 
   .el-form-item {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid #dcdfe6;
+    background: #fff;
     border-radius: 5px;
     color: #454545;
+  }
+  .el-form-item:not(.nohover):hover{
+        border: 1px solid #3a8ee6;
+  }
+  .code{
+    width: 70%;
+    float: left;
+  }
+  .auth_code{
+    float: left;
+    // height: 47px;
   }
 }
 </style>
 
 <style lang="scss" scoped>
-$bg:#2d3a4b;
+$bg:#3a8ee6;
 $dark_gray:#889aa4;
-$light_gray:#eee;
+$light_gray:rgba(0,0,0,.85);
 
 .login-container {
   min-height: 100%;
@@ -187,13 +235,14 @@ $light_gray:#eee;
     position: relative;
     width: 520px;
     max-width: 100%;
-    padding: 160px 35px 0;
-    margin: 0 auto;
+    padding: 35px 35px;
+    margin: 10% auto 0;
     overflow: hidden;
+    background-color:  #fff;
   }
 
   .tips {
-    font-size: 14px;
+    // font-size: 14px;
     color: #fff;
     margin-bottom: 10px;
 

@@ -29,17 +29,22 @@ export default [
     url: '/user/login',
     type: 'post',
     response: config => {
-      const { username } = config.body
+      const { username,password } = config.body
       const token = tokens[username]
-
+      
       // mock error
       if (!token) {
         return {
           code: 60204,
-          message: 'Account and password are incorrect.'
+          message: '用户名错误'
         }
       }
-
+      if(password != '123456'){
+        return{
+          code:60204,
+          message:'密码错误'
+        }
+      }
       return {
         code: 20000,
         data: token

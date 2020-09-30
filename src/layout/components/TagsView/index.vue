@@ -229,12 +229,12 @@ export default {
         margin-right: 15px;
       }
       &.active {
-        background-color: #42b983;
-        color: #fff;
-        border-color: #42b983;
+        background-color: rgb(238,241,246);
+        color: #283443;
+        border-color:#3a8ee6;
         &::before {
           content: '';
-          background: #fff;
+          background: #3a8ee6;
           display: inline-block;
           width: 8px;
           height: 8px;
@@ -244,6 +244,10 @@ export default {
         }
       }
     }
+  
+  
+  
+  
   }
   .contextmenu {
     margin: 0;

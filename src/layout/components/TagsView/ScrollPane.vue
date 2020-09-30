@@ -21,6 +21,7 @@ export default {
   },
   methods: {
     handleScroll(e) {
+
       const eventDelta = e.wheelDelta || -e.deltaY * 40
       const $scrollWrapper = this.scrollWrapper
       $scrollWrapper.scrollLeft = $scrollWrapper.scrollLeft + eventDelta / 4
@@ -28,6 +29,7 @@ export default {
     moveToTarget(currentTag) {
       const $container = this.$refs.scrollContainer.$el
       const $containerWidth = $container.offsetWidth
+
       const $scrollWrapper = this.scrollWrapper
       const tagList = this.$parent.$refs.tag
 
@@ -69,8 +71,8 @@ export default {
 
 <style lang="scss" scoped>
 .scroll-container {
-  white-space: nowrap;
-  position: relative;
+   white-space: nowrap;
+   position: relative;
   overflow: hidden;
   width: 100%;
   /deep/ {
@@ -78,7 +80,7 @@ export default {
       bottom: 0px;
     }
     .el-scrollbar__wrap {
-      //height: 49px;
+      height: 100%;
     }
   }
 }

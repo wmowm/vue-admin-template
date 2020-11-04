@@ -46,3 +46,36 @@ export function getMenuList() {
       params
     })
   }
+
+
+  export function createMenu(data) {
+    return request({
+      url: '/api/menu/createMenu',
+      method: 'post',
+      data
+    })
+  }
+
+  export function getMenu(params) {
+    return request({
+      url: '/api/menu/getMenu',
+      method: 'get',
+      params
+    })
+  }
+
+  export function updateMenu(data) {
+    return request({
+      url: '/api/menu/updateMenu',
+      method: 'post',
+      data
+    })
+  }
+
+  export function deleteMenu(params) {
+    return request({
+      url: '/api/menu/deleteMenu',
+      method: 'get',
+      params
+    })
+  }

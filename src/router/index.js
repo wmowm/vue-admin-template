@@ -36,7 +36,11 @@ export const constantRoutes = [
     component: () => import('@/views/login/index'),
     hidden: true
   },
-
+  {
+    path: '/Test',
+    component: () => import('@/views/test/index'),
+    hidden: true
+  },
   {
     path: '/404',
     component: () => import('@/views/404'),
@@ -77,6 +81,12 @@ export const constantRoutes = [
         name: 'Tree',
         component: () => import('@/views/tree/index'),
         meta: { title: 'Tree', icon: 'tree' }
+      },
+      {
+        path: 'button',
+        name: 'Button',
+        component: () => import('@/views/tree/button'),
+        meta: { title: 'Button', icon: 'button' }
       }
     ]
   },

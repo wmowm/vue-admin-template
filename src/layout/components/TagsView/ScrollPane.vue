@@ -71,8 +71,8 @@ export default {
 
 <style lang="scss" scoped>
 .scroll-container {
-   white-space: nowrap;
-   position: relative;
+  white-space: nowrap;
+  position: relative;
   overflow: hidden;
   width: 100%;
   /deep/ {
@@ -80,7 +80,7 @@ export default {
       bottom: 0px;
     }
     .el-scrollbar__wrap {
-      height: 100%;
+      height: 49px;
     }
   }
 }

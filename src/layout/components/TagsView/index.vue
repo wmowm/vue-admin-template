@@ -17,17 +17,17 @@
       </router-link>
     </scroll-pane>
     <ul v-show="visible" :style="{left:left+'px',top:top+'px'}" class="contextmenu">
-      <li @click="refreshSelectedTag(selectedTag)">
-        {{ 'tagsView.refresh' }}
-      </li>
+      <!-- <li @click="refreshSelectedTag(selectedTag)">
+        刷新
+      </li> -->
       <li v-if="!(selectedTag.meta&&selectedTag.meta.affix)" @click="closeSelectedTag(selectedTag)">
-        {{'tagsView.close' }}
+        关闭当前
       </li>
       <li @click="closeOthersTags">
-        {{ 'tagsView.closeOthers' }}
+        关闭其它
       </li>
       <li @click="closeAllTags(selectedTag)">
-        {{ 'tagsView.closeAll' }}
+        关闭所有
       </li>
     </ul>
   </div>
@@ -133,9 +133,10 @@ export default {
     refreshSelectedTag(view) {
       this.$store.dispatch('tagsView/delCachedView', view).then(() => {
         const { fullPath } = view
+        
         this.$nextTick(() => {
           this.$router.replace({
-            path: '/redirect' + fullPath
+            path: fullPath
           })
         })
       })
@@ -192,6 +193,7 @@ export default {
       this.top = e.clientY
       this.visible = true
       this.selectedTag = tag
+      
     },
     closeMenu() {
       this.visible = false
@@ -200,9 +202,10 @@ export default {
 }
 </script>
 
+
 <style lang="scss" scoped>
 .tags-view-container {
-  height: 40px;
+  height: 34px;
   width: 100%;
   background: #fff;
   border-bottom: 1px solid #d8dce5;
@@ -212,8 +215,8 @@ export default {
       display: inline-block;
       position: relative;
       cursor: pointer;
-      height: 32px;
-      line-height: 32px;
+      height: 26px;
+      line-height: 26px;
       border: 1px solid #d8dce5;
       color: #495060;
       background: #fff;
@@ -221,7 +224,6 @@ export default {
       font-size: 12px;
       margin-left: 5px;
       margin-top: 4px;
-      border-radius: 5px;
       &:first-of-type {
         margin-left: 15px;
       }
@@ -229,12 +231,12 @@ export default {
         margin-right: 15px;
       }
       &.active {
-        background-color: rgb(238,241,246);
-        color: #283443;
-        border-color:#3a8ee6;
+        background-color: #42b983;
+        color: #fff;
+        border-color: #42b983;
         &::before {
           content: '';
-          background: #3a8ee6;
+          background: #fff;
           display: inline-block;
           width: 8px;
           height: 8px;
@@ -244,10 +246,6 @@ export default {
         }
       }
     }
-  
-  
-  
-  
   }
   .contextmenu {
     margin: 0;
@@ -298,3 +296,4 @@ export default {
   }
 }
 </style>
+

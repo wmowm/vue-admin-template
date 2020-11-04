@@ -1,26 +1,5 @@
 <template>
   <div class="app-container">
-    <div class="filter-container">
-      <el-input v-model="listQuery.title" placeholder="标题" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
-
-      <el-select v-model="listQuery.status" placeholder="状态" clearable style="width: 90px" class="filter-item">
-        <el-option v-for="k,v in statusOptions" :key="k" :label="k" :value="v" />
-      </el-select>
-
-      <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
-        查询
-      </el-button>
-      <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
-        添加
-      </el-button>
-      <!-- <el-button v-waves :loading="downloadLoading" class="filter-item" type="primary" icon="el-icon-download" @click="handleDownload">
-        {{ table.export }}
-      </el-button>
-      <el-checkbox v-model="showReviewer" class="filter-item" style="margin-left:15px;" @change="tableKey=tableKey+1">
-        {{ table.reviewer }}
-      </el-checkbox> -->
-    </div>
-
     <el-table
       v-loading="listLoading"
       :data="list"
@@ -31,48 +10,31 @@
       highlight-current-row
       class="tableBox"
     >
-
-      <el-table-column
-        type="selection"
-        width="55">
+      <el-table-column label="菜单ID">
+        <template slot-scope="scope">
+          {{ scope.row.parentId }}
+        </template>
       </el-table-column>
-
-      <el-table-column align="center" label="ID" width="95">
+      <el-table-column align="center" label="按钮ID" width="95">
         <template slot-scope="scope">
           {{ scope.row.id }}
         </template>
       </el-table-column>
-      <el-table-column label="标题">
+      <el-table-column label="按钮名称" align="center">
         <template slot-scope="scope">
-          {{ scope.row.title }}
+          <span>{{ scope.row.name }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="密钥" align="center">
+      <el-table-column label="按钮图标" align="center">
         <template slot-scope="scope">
-          <span>{{ scope.row.author }}</span>
+            <i class='scope.row.icon'></i>
         </template>
       </el-table-column>
-      <el-table-column label="描述" align="center">
+      <el-table-column label="路由地址" align="center">
         <template slot-scope="scope">
-          {{ scope.row.remark }}
+             <span>{{ scope.row.url }}</span>
         </template>
       </el-table-column>
-
-
-      <el-table-column class-name="status-col" label="状态" width="110" align="center">
-        <template slot-scope="scope">
-          <el-tag v-if="scope.row.status==1">成功</el-tag>
-          <el-tag v-if="scope.row.status==2">失败</el-tag>
-          <el-tag v-if="scope.row.status==3">其它</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column sortable="custom" align="center" prop="created_at" label="时间" width="200">
-        <template slot-scope="scope">
-          <i class="el-icon-time" />
-          <span>{{ scope.row.timestamp }}</span>
-        </template>
-      </el-table-column>
-
       <el-table-column
       label="操作"
       align="center"
@@ -99,26 +61,47 @@
     </el-table>
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.pageIndex" :limit.sync="listQuery.pageSize" @pagination="getList" />
 
-      <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible":close-on-click-modal=false>
-      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="标题" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="密钥" prop="author">
-          <el-input v-model="temp.author" />
-        </el-form-item>
-        <el-form-item label="时间" prop="timestamp">
-          <el-date-picker v-model="temp.timestamp" type="datetime" placeholder="请选择时间" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="temp.status" class="filter-item" placeholder="请选择状态">
-            <el-option v-for="k,v in statusOptions" :key="k" :label="k" :value="v" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述" prop="remark">
-          <el-input v-model="temp.remark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" />
-        </el-form-item>
-      </el-form>
+    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible":close-on-click-modal='false' width='30%'>
+        <el-dialog
+            width="50%"
+            title="选择图标"
+            :visible.sync="innerVisible"
+            append-to-body>
+            <div class="icons-container">
+             <div v-for="item of elementIcons" :key="item" @click="handleClipboard(item,$event)">
+                <el-tooltip placement="top">
+                    <div slot="content">
+                    {{ generateElementIconCode(item) }}
+                    </div>
+                    <div class="icon-item">
+                    <i :class="'el-icon-' + item" />
+                    <span>{{ item }}</span>
+                    </div>
+                </el-tooltip>
+                </div>
+            </div>
+        </el-dialog>
+        <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
+            <el-form-item label="菜单ID" prop="parentId">
+            <el-input :disabled="true" v-model="temp.parentId" />
+            </el-form-item>
+            <el-form-item label="按钮名称" prop="name">
+            <el-input v-model="temp.name" />
+            </el-form-item>
+            <el-form-item label="按钮图标" prop="icon">
+             <el-input placeholder="请选择图标" v-model="temp.icon">
+                <template slot="prepend">
+                    <i :class="temp.icon" />
+                </template>
+                <el-button slot="append" icon="el-icon-search" @click="innerVisible = true"></el-button>
+             </el-input>
+            </el-form-item>
+            <el-form-item label="路由地址" prop="url">
+            <el-input placeholder="请输入路由地址" v-model="temp.url">
+                <template slot="prepend">Http://</template>
+             </el-input>
+            </el-form-item>
+        </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">
           取消
@@ -128,16 +111,18 @@
         </el-button>
       </div>
     </el-dialog>
-
   </div>
 </template>
 
+
+
 <script>
-import { getUserList,createUser ,updateUser,deleteUser} from '@/api/table'
+import { getMenuButtonList} from '@/api/menu'
 
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import elementIcons from '../icons/element-icons'
 export default {
   name: 'ComplexTable',
   components: { Pagination },
@@ -154,6 +139,7 @@ export default {
   },
   data() {
     return {
+      elementIcons,
       tableKey: 0,
       list: null,
       total: 0,
@@ -166,13 +152,16 @@ export default {
         //sort: '+id'
       },
       temp: {
-        author: '',
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: '2',
+        id:'',
+        name: '',
+        icon: '',
+        level: '',
+        parentId: '',
+        url:'',
+        sort:''
       },
-      dialogFormVisible: false,
+      dialogFormVisible: false, //外层dialog
+      innerVisible:false, //内层dialog
       dialogStatus: '',
       textMap: {
         update: '编辑',
@@ -196,7 +185,7 @@ export default {
     getList() {
       console.log(this.listQuery)
       this.listLoading = true
-      getUserList(this.listQuery).then(response => {
+      getMenuButtonList(this.listQuery).then(response => {
         this.list = response.data
         this.total = response.total
         this.listLoading = false
@@ -206,18 +195,25 @@ export default {
       this.listQuery.pageIndex = 1
       this.getList()
     },
-    resetTemp() {
-      this.temp = {
-        id: undefined,
-        author: '',
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: '2',
-      }
+    generateElementIconCode(symbol) {
+      return `<i class="el-icon-${symbol}" />`
     },
+    handleClipboard(text, event) {
+      this.innerVisible = false
+      this.temp.icon=`el-icon-${text}`
+    },
+    // resetTemp() {
+    //   this.temp = {
+    //     id: undefined,
+    //     author: '',
+    //     remark: '',
+    //     timestamp: new Date(),
+    //     title: '',
+    //     status: '2',
+    //   }
+    // },
     handleCreate() {
-      this.resetTemp()
+      //this.resetTemp()
       this.dialogStatus = 'create'
       this.dialogFormVisible = true
       this.$nextTick(() => {
@@ -281,3 +277,31 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.icons-container {
+  margin: 10px 20px 0;
+  overflow: hidden;
+
+  .icon-item {
+    margin: 20px;
+    height: 85px;
+    text-align: center;
+    width: 100px;
+    float: left;
+    font-size: 30px;
+    color: #24292e;
+    cursor: pointer;
+  }
+
+  span {
+    display: block;
+    font-size: 16px;
+    margin-top: 10px;
+  }
+
+  .disabled {
+    pointer-events: none;
+  }
+}
+</style>

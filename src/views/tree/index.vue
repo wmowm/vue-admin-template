@@ -1,78 +1,559 @@
 <template>
-  <div class="app-container">
-    <el-input v-model="filterText" placeholder="Filter keyword" style="margin-bottom:30px;" />
+  <div class="main" ref="main" :style="eBody_menu">
+    <el-card class="box-card-menu" :style="eCard_menu">
+      <div slot="header" class="clearfix">
+        <span>菜单</span>
+        <div style="float: right" @click="this.getHW">
+          <i class="el-icon-refresh"></i>
+        </div>
+      </div>
 
-    <el-tree
-      ref="tree2"
-      :data="data2"
-      :props="defaultProps"
-      :filter-node-method="filterNode"
-      class="filter-tree"
-      default-expand-all
-    />
+      <el-tree
+        :data="list_menu"
+        :props="defaultProps"
+        @node-click=""
+        :render-content="renderContent"
+      >
+      </el-tree>
+    </el-card>
 
+    <el-card class="box-card-body" :style="eCard_body">
+      <div slot="header" class="clearfix">
+        <span>按钮</span>
+        <div style="float: right" @click="this.getHW"></div>
+      </div>
+      <menuButton></menuButton>
+    </el-card>
+
+    <!-- 目录 -->
+    <el-dialog
+      :title="textMap[dialogStatus]"
+      :visible.sync="dialogDirFormVisible"
+      :close-on-click-modal="false"
+      width="30%"
+    >
+      <el-dialog
+        width="50%"
+        title="选择图标"
+        :visible.sync="innerDirVisible"
+        append-to-body
+      >
+        <div class="icons-container">
+          <div
+            v-for="item of elementIcons"
+            :key="item"
+            @click="handleClipboard(item, $event)"
+          >
+            <el-tooltip placement="top">
+              <div slot="content">
+                {{ generateElementIconCode(item) }}
+              </div>
+              <div class="icon-item">
+                <i :class="'el-icon-' + item" />
+                <span>{{ item }}</span>
+              </div>
+            </el-tooltip>
+          </div>
+        </div>
+      </el-dialog>
+      <el-form
+        ref="dataFormDir"
+        :rules="rulesDir"
+        :model="tempDir"
+        label-position="left"
+        label-width="80px"
+        style="width: 400px; margin-left: 50px"
+      >
+        <el-form-item label="目录ID">
+          <el-input :disabled="true" v-model="tempDir.id" />
+        </el-form-item>
+        <el-form-item label="目录名称" prop="name">
+          <el-input v-model="tempDir.name" />
+        </el-form-item>
+        <el-form-item label="目录图标" prop="icon">
+          <el-input placeholder="请选择图标" v-model="tempDir.icon">
+            <template slot="prepend">
+              <i :class="tempDir.icon" />
+            </template>
+            <el-button
+              slot="append"
+              icon="el-icon-search"
+              @click="innerDirVisible = true"
+            ></el-button>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="排序" prop="sort">
+          <el-input
+            type="number"
+            placeholder="数字越小越靠前"
+            v-model="tempDir.sort"
+          >
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogDirFormVisible = false"> 取消 </el-button>
+        <el-button
+          type="primary"
+          @click="dialogStatus === 'addDir' ? createDirData() : updateDirData()"
+        >
+          确定
+        </el-button>
+      </div>
+    </el-dialog>
+    <!-- 菜单 -->
+    <el-dialog
+      :title="textMap[dialogStatus]"
+      :visible.sync="dialogFormVisible"
+      :close-on-click-modal="false"
+      width="30%"
+    >
+      <el-dialog
+        width="50%"
+        title="选择图标"
+        :visible.sync="innerVisible"
+        append-to-body
+      >
+        <div class="icons-container">
+          <div
+            v-for="item of elementIcons"
+            :key="item"
+            @click="handleClipboard(item, $event)"
+          >
+            <el-tooltip placement="top">
+              <div slot="content">
+                {{ generateElementIconCode(item) }}
+              </div>
+              <div class="icon-item">
+                <i :class="'el-icon-' + item" />
+                <span>{{ item }}</span>
+              </div>
+            </el-tooltip>
+          </div>
+        </div>
+      </el-dialog>
+      <el-form
+        ref="dataForm"
+        :rules="rules"
+        :model="temp"
+        label-position="left"
+        label-width="80px"
+        style="width: 400px; margin-left: 50px"
+      >
+        <el-form-item label="菜单ID" prop="parentId">
+          <el-input :disabled="true" v-model="temp.parentId" />
+        </el-form-item>
+        <el-form-item label="按钮名称" prop="name">
+          <el-input v-model="temp.name" />
+        </el-form-item>
+        <el-form-item label="按钮图标" prop="icon">
+          <el-input placeholder="请选择图标" v-model="temp.icon">
+            <template slot="prepend">
+              <i :class="temp.icon" />
+            </template>
+            <el-button
+              slot="append"
+              icon="el-icon-search"
+              @click="innerVisible = true"
+            ></el-button>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="路由地址" prop="url">
+          <el-input placeholder="请输入路由地址" v-model="temp.url">
+            <template slot="prepend">Http://</template>
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogFormVisible = false"> 取消 </el-button>
+        <el-button
+          type="primary"
+          @click="dialogStatus === 'create' ? createData() : updateData()"
+        >
+          确定
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
-
 <script>
+import menuButton from "../tree/button";
+import { getMenuList, createDir, updateDir, deleteDir,getDir } from "@/api/menu";
+import elementIcons from "../icons/element-icons";
 export default {
-
   data() {
     return {
-      filterText: '',
-      data2: [{
-        id: 1,
-        label: 'Level one 1',
-        children: [{
-          id: 4,
-          label: 'Level two 1-1',
-          children: [{
-            id: 9,
-            label: 'Level three 1-1-1'
-          }, {
-            id: 10,
-            label: 'Level three 1-1-2'
-          }]
-        }]
-      }, {
-        id: 2,
-        label: 'Level one 2',
-        children: [{
-          id: 5,
-          label: 'Level two 2-1'
-        }, {
-          id: 6,
-          label: 'Level two 2-2'
-        }]
-      }, {
-        id: 3,
-        label: 'Level one 3',
-        children: [{
-          id: 7,
-          label: 'Level two 3-1'
-        }, {
-          id: 8,
-          label: 'Level two 3-2'
-        }]
-      }],
+      eBody_menu: {
+        height: "",
+        width: "",
+      },
+      eCard_menu: {
+        width: "",
+      },
+      eCard_body: {
+        width: "",
+      },
+      list_menu: [],
       defaultProps: {
-        children: 'children',
-        label: 'label'
-      }
-    }
+        children: "children",
+        label: "id",
+      },
+      elementIcons,
+      tableKey: 0,
+      query:{
+        id:''
+      },
+      tempDir: {
+        id: "",
+        name: "",
+        icon: "",
+        level: "",
+        parentId: "",
+        url: "",
+        sort: "",
+      },
+      temp: {
+        id: "",
+        name: "",
+        icon: "",
+        level: "",
+        parentId: "",
+        url: "",
+        sort: "",
+      },
+      textMap: {
+        addDir: "添加目录",
+        editDir: "编辑目录",
+        deleteDir: "删除目录",
+        addMenu: "添加菜单",
+        editMenu: "编辑菜单",
+        deleteMenu: "删除菜单",
+      },
+      dialogStatus: "",
+      dialogTag: "", //目录 or 菜单
+      dialogDirFormVisible: false, //外层dialog
+      innerDirVisible: false, //内层dialog
+      dialogFormVisible: false, //外层dialog
+      innerVisible: false, //内层dialog
+      rulesDir: {
+        name: [
+          { required: true, message: "目录名称不能为空", trigger: "blur" },
+        ],
+        icon: [
+          { required: true, message: "目录图标不能为空", trigger: "blur" },
+        ],
+      },
+      rules: {
+        // dir_name: [{ required: true, message: "目录名称不能为空", trigger: "blur" }],
+        // dir_icon: [{ required: true, message: "目录图标不能为空", trigger: "blur" }],
+      },
+      downloadLoading: false,
+    };
   },
-  watch: {
-    filterText(val) {
-      this.$refs.tree2.filter(val)
-    }
+  components: {
+    menuButton: menuButton,
   },
-
   methods: {
-    filterNode(value, data) {
-      if (!value) return true
-      return data.label.indexOf(value) !== -1
-    }
-  }
-}
+    getHW() {
+      this.eBody_menu.height = window.innerHeight - 95 + "px";
+      this.eBody_menu.width = window.innerWidtht - 210 + "px";
+
+      const eWidth = document.body.clientWidth - 210;
+      const eHeigh = document.body.clientHeight;
+      console.log(eWidth, eHeigh);
+      this.eCard_menu.width = eWidth * 0.2 + "px";
+      this.eCard_body.width = eWidth * 0.8 - 20 + "px";
+    },
+    renderContent(h, { node, data, store }) {
+      node.data._add = "";
+      node.data._addIcon = "";
+      node.data._remove = "";
+      node.data._removeIcon = "";
+      node.data._edit = "";
+      node.data._editIcon = "";
+      node.data._num = 0;
+
+      if (node.data.level == 0) {
+        node.data._add = "添加目录";
+        node.data._addIcon = "el-icon-folder-add";
+        node.data._num = 2;
+      }
+      if (node.data.level == 1) {
+        node.data._add = "添加菜单";
+        node.data._addIcon = "el-icon-document-add";
+        node.data._num = 2;
+        node.data._edit = "编辑目录";
+        node.data._editIcon = "el-icon-edit-outline";
+        node.data._remove = "删除目录";
+        node.data._removeIcon = "el-icon-folder-delete";
+      }
+      if (node.data.level == 2) {
+        node.data._add = "添加按钮";
+        node.data._addIcon = "el-icon-plus";
+        node.data._num = 2;
+      }
+      return (
+        <span class="custom-tree-node">
+          <span>
+            <i class={node.data.icon}></i> {node.data.name}
+          </span>
+          <span
+            on-click={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <el-dropdown
+              on-command={(command) => {
+                console.log(command);
+                this.$nextTick(() => {
+                  this.resetTemp();
+                });
+                //格式 id,parentId,level,action
+                const arry = command.split(",");
+
+                if (arry[2] == "0") {
+                  this.dialogStatus = "addDir";
+                  this.dialogTag = "dir";
+                  this.dialogDirFormVisible = true;
+                  this.tempDir.parentId = arry[0];
+                }
+                if (arry[2] == "1") {
+                  if (arry[3] == "add") {
+                    //添加菜单
+                    this.dialogStatus = "addMenu";
+                    this.dialogTag = "menu";
+                    this.dialogFormVisible = true;
+                  } else if (arry[3] == "edit") {
+                    //编辑目录
+                    this.query.id = arry[0]
+                    this.handleDirUpdate()
+
+                    this.dialogStatus = "editDir";
+                    this.dialogTag = "dir";
+                    this.dialogDirFormVisible = true;
+                  } else {
+                    //删除目录
+                  }
+                }
+                if (arry[2] == "2") {
+                  alert(`菜单:${arry[0]}执行${arry[2]}操作`);
+                }
+              }}
+            >
+              <span class="el-dropdown-link">
+                操作<i class="el-icon-arrow-down el-icon--right"></i>
+              </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item
+                  icon={node.data._addIcon}
+                  command={
+                    node.data.id +
+                    "," +
+                    node.data.parentId +
+                    "," +
+                    node.data.level +
+                    ",add"
+                  }
+                >
+                  {node.data._add}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  icon={node.data._editIcon}
+                  command={
+                    node.data.id +
+                    "," +
+                    node.data.parentId +
+                    "," +
+                    node.data.level +
+                    ",edit"
+                  }
+                >
+                  {node.data._edit}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  icon={node.data._removeIcon}
+                  command={
+                    node.data.id +
+                    "," +
+                    node.data.parentId +
+                    "," +
+                    node.data.level +
+                    ",remove"
+                  }
+                >
+                  {node.data._remove}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+          </span>
+        </span>
+      );
+    },
+    getMenuList() {
+      this.listLoading = true;
+      getMenuList().then((response) => {
+        this.list_menu = response.data;
+        this.listLoading = false;
+      });
+      this.listLoading = false;
+    },
+    generateElementIconCode(symbol) {
+      return `<i class="el-icon-${symbol}" />`;
+    },
+    handleClipboard(text, event) {
+      if (this.dialogTag == "dir") {
+        this.innerDirVisible = false;
+        this.tempDir.icon = `el-icon-${text}`;
+      } else {
+        this.innerVisible = false;
+        this.temp.icon = `el-icon-${text}`;
+      }
+    },
+    resetTemp() {
+      this.temp = {
+        id: "",
+        name: "",
+        icon: "",
+        level: "2",
+        parentId: "",
+        url: "",
+        sort: "99",
+      };
+      this.tempDir = {
+        id: "",
+        name: "",
+        icon: "",
+        level: "1",
+        parentId: "Home",
+        url: "",
+        sort: "99",
+      };
+    },
+    createDirData() {
+      this.$refs["dataFormDir"].validate((valid) => {
+        if (valid) {
+          console.log(this.tempDir);
+          createDir(this.tempDir).then(() => {
+            this.dialogDirFormVisible = false;
+            this.$notify({
+              title: "成功",
+              message: "创建成功",
+              type: "success",
+              duration: 2000,
+            });
+          });
+        }
+      });
+    },
+    handleDirUpdate() {
+        this.listLoading = true
+        getDir(this.query).then(response => {
+        this.tempDir = response.data
+        this.listLoading = false
+      })
+    },
+    updateDirData(){
+       this.$refs["dataFormDir"].validate((valid) => {
+        if (valid) {
+          updateDir(this.tempDir).then(() => {
+            this.dialogDirFormVisible = false;
+            this.$notify({
+              title: "成功",
+              message: "修改成功",
+              type: "success",
+              duration: 2000,
+            });
+          });
+        }
+      });
+    },
+  },
+  created: function () {
+    window.addEventListener("resize", this.getHeight);
+    this.getHW();
+    this.getMenuList();
+  },
+};
 </script>
 
+<style>
+/* .el-tree-node:focus > .el-tree-node__content {
+    background-color: #03a9f4;
+    border-radius: 5px;
+} */
+
+.custom-tree-node {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  padding-right: 8px;
+}
+</style>
+
+<style>
+.main {
+  margin: 5px;
+  width: 100%;
+  float: left;
+}
+
+.text {
+  font-size: 14px;
+}
+
+.item {
+  margin-bottom: 18px;
+}
+
+.clearfix:before,
+.clearfix:after {
+  display: table;
+  content: "";
+}
+.clearfix:after {
+  clear: both;
+}
+
+.box-card-menu {
+  height: 100%;
+  float: left;
+  overflow: scroll;
+}
+.box-card-body {
+  margin-right: 10px;
+  margin-left: 5px;
+  height: 100%;
+  float: left;
+  overflow: scroll;
+}
+</style>
+
+<style lang="scss" scoped>
+.icons-container {
+  margin: 10px 20px 0;
+  overflow: hidden;
+
+  .icon-item {
+    margin: 20px;
+    height: 85px;
+    text-align: center;
+    width: 100px;
+    float: left;
+    font-size: 30px;
+    color: #24292e;
+    cursor: pointer;
+  }
+
+  span {
+    display: block;
+    font-size: 16px;
+    margin-top: 10px;
+  }
+
+  .disabled {
+    pointer-events: none;
+  }
+}
+</style>

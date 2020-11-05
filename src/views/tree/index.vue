@@ -11,7 +11,6 @@
       <el-tree
         :data="list_menu"
         :props="defaultProps"
-        @node-click=""
         :render-content="renderContent"
       >
       </el-tree>
@@ -140,13 +139,16 @@
         label-width="80px"
         style="width: 400px; margin-left: 50px"
       >
-        <el-form-item label="菜单ID" prop="parentId">
+        <el-form-item label="目录ID" prop="parentId">
           <el-input :disabled="true" v-model="temp.parentId" />
         </el-form-item>
-        <el-form-item label="按钮名称" prop="name">
+        <el-form-item label="菜单ID" prop="id">
+          <el-input :disabled="true" v-model="temp.id" />
+        </el-form-item>
+        <el-form-item label="菜单名称" prop="name">
           <el-input v-model="temp.name" />
         </el-form-item>
-        <el-form-item label="按钮图标" prop="icon">
+        <el-form-item label="菜单图标" prop="icon">
           <el-input placeholder="请选择图标" v-model="temp.icon">
             <template slot="prepend">
               <i :class="temp.icon" />
@@ -168,17 +170,39 @@
         <el-button @click="dialogFormVisible = false"> 取消 </el-button>
         <el-button
           type="primary"
-          @click="dialogStatus === 'create' ? createData() : updateData()"
+          @click="dialogStatus === 'addMenu' ? createData() : updateData()"
         >
           确定
         </el-button>
       </div>
     </el-dialog>
+    <!-- 确认删除 -->
+    <el-dialog
+      :title="textMap[dialogStatus]"
+      :visible.sync="dialogDelVisible"
+      width="30%"
+      >
+      <span>确定{{textMap[dialogStatus]}}吗?</span>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogDelVisible = false">取 消</el-button>
+        <el-button type="primary" @click="dialogDelVisible = false">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 <script>
 import menuButton from "../tree/button";
-import { getMenuList, createDir, updateDir, deleteDir,getDir } from "@/api/menu";
+import {
+  getMenuList,
+  createDir,
+  updateDir,
+  deleteDir,
+  getDir,
+  createMenu,
+  updateMenu,
+  deleteMenu,
+  getMenu,
+} from "@/api/menu";
 import elementIcons from "../icons/element-icons";
 export default {
   data() {
@@ -200,8 +224,8 @@ export default {
       },
       elementIcons,
       tableKey: 0,
-      query:{
-        id:''
+      query: {
+        id: "",
       },
       tempDir: {
         id: "",
@@ -235,6 +259,7 @@ export default {
       innerDirVisible: false, //内层dialog
       dialogFormVisible: false, //外层dialog
       innerVisible: false, //内层dialog
+      dialogDelVisible:false,//删除dialog
       rulesDir: {
         name: [
           { required: true, message: "目录名称不能为空", trigger: "blur" },
@@ -244,8 +269,9 @@ export default {
         ],
       },
       rules: {
-        // dir_name: [{ required: true, message: "目录名称不能为空", trigger: "blur" }],
-        // dir_icon: [{ required: true, message: "目录图标不能为空", trigger: "blur" }],
+         name: [{ required: true, message: "菜单名称不能为空", trigger: "blur" }],
+         url: [{ required: true, message: "菜单路由不能为空", trigger: "blur" }],
+         icon: [{ required: true, message: "菜单图标不能为空", trigger: "blur" }],
       },
       downloadLoading: false,
     };
@@ -271,17 +297,14 @@ export default {
       node.data._removeIcon = "";
       node.data._edit = "";
       node.data._editIcon = "";
-      node.data._num = 0;
 
       if (node.data.level == 0) {
         node.data._add = "添加目录";
         node.data._addIcon = "el-icon-folder-add";
-        node.data._num = 2;
       }
       if (node.data.level == 1) {
         node.data._add = "添加菜单";
         node.data._addIcon = "el-icon-document-add";
-        node.data._num = 2;
         node.data._edit = "编辑目录";
         node.data._editIcon = "el-icon-edit-outline";
         node.data._remove = "删除目录";
@@ -290,7 +313,10 @@ export default {
       if (node.data.level == 2) {
         node.data._add = "添加按钮";
         node.data._addIcon = "el-icon-plus";
-        node.data._num = 2;
+        node.data._edit = "编辑菜单";
+        node.data._editIcon = "el-icon-edit-outline";
+        node.data._remove = "删除菜单";
+        node.data._removeIcon = "el-icon-folder-delete";
       }
       return (
         <span class="custom-tree-node">
@@ -304,10 +330,7 @@ export default {
           >
             <el-dropdown
               on-command={(command) => {
-                console.log(command);
-                this.$nextTick(() => {
-                  this.resetTemp();
-                });
+                this.resetTemp();
                 //格式 id,parentId,level,action
                 const arry = command.split(",");
 
@@ -320,23 +343,33 @@ export default {
                 if (arry[2] == "1") {
                   if (arry[3] == "add") {
                     //添加菜单
+                    this.temp.parentId = arry[0]
                     this.dialogStatus = "addMenu";
                     this.dialogTag = "menu";
                     this.dialogFormVisible = true;
+
                   } else if (arry[3] == "edit") {
                     //编辑目录
-                    this.query.id = arry[0]
-                    this.handleDirUpdate()
+                    this.query.id = arry[0];
+                    this.handleDirUpdate();
 
                     this.dialogStatus = "editDir";
                     this.dialogTag = "dir";
                     this.dialogDirFormVisible = true;
                   } else {
                     //删除目录
+                      this.dialogStatus = "deleteDir";
+                      this.dialogDelFormVisible = true;
                   }
                 }
                 if (arry[2] == "2") {
-                  alert(`菜单:${arry[0]}执行${arry[2]}操作`);
+                  if (arry[3] == "add") {
+                    alert("添加按钮");
+                  } else if (arry[3] == "edit") {
+                    alert(`编辑菜单`);
+                  } else {
+                    alert(`删除菜单`);
+                  }
                 }
               }}
             >
@@ -446,14 +479,14 @@ export default {
       });
     },
     handleDirUpdate() {
-        this.listLoading = true
-        getDir(this.query).then(response => {
-        this.tempDir = response.data
-        this.listLoading = false
-      })
+      this.listLoading = true;
+      getDir(this.query).then((response) => {
+        this.tempDir = response.data;
+        this.listLoading = false;
+      });
     },
-    updateDirData(){
-       this.$refs["dataFormDir"].validate((valid) => {
+    updateDirData() {
+      this.$refs["dataFormDir"].validate((valid) => {
         if (valid) {
           updateDir(this.tempDir).then(() => {
             this.dialogDirFormVisible = false;
@@ -466,6 +499,46 @@ export default {
           });
         }
       });
+    },
+    createData(){
+      this.$refs["dataForm"].validate((valid) => {
+        if (valid) {
+          createMenu(this.temp).then(() => {
+            this.dialogFormVisible = false;
+            this.$notify({
+              title: "成功",
+              message: "创建成功",
+              type: "success",
+              duration: 2000,
+            });
+          });
+        }
+      });
+    },
+     handleUpdate() {
+      this.listLoading = true;
+      getDir(this.query).then((response) => {
+        this.tempDir = response.data;
+        this.listLoading = false;
+      });
+    },
+    updateData() {
+      this.$refs["dataForm"].validate((valid) => {
+        if (valid) {
+          updateDir(this.temp).then(() => {
+            this.dialogFormVisible = false;
+            this.$notify({
+              title: "成功",
+              message: "修改成功",
+              type: "success",
+              duration: 2000,
+            });
+          });
+        }
+      });
+    },
+    deleteData() {
+
     },
   },
   created: function () {

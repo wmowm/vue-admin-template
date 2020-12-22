@@ -45,9 +45,11 @@ const actions = {
         if (!data) {
           reject('Verification failed, please Login again.')
         }
+
         const { name, avatar } = data
         commit('SET_NAME', name)
         commit('SET_AVATAR', avatar)
+        commit('SET_CMPNAME', companyName)
         resolve(data)
       }).catch(error => {
         reject(error)

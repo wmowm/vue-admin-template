@@ -79,3 +79,35 @@ export function getMenuList() {
       params
     })
   }
+
+  export function createButton(data) {
+    return request({
+      url: '/api/menu/createButton',
+      method: 'post',
+      data
+    })
+  }
+
+  export function getButton(params) {
+    return request({
+      url: '/api/menu/getButton',
+      method: 'get',
+      params
+    })
+  }
+
+  export function updateButton(data) {
+    return request({
+      url: '/api/menu/updateButton',
+      method: 'post',
+      data
+    })
+  }
+
+  export function deleteButton(params) {
+    return request({
+      url: '/api/menu/deleteButton',
+      method: 'get',
+      params
+    })
+  }

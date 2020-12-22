@@ -9,9 +9,14 @@
       </div>
 
       <el-tree
+        node-key="id"
         :data="list_menu"
         :props="defaultProps"
+        :highlight-current="true"
+        :load="loadDataTree"
+         default-expand-all 
         :render-content="renderContent"
+        @node-click="nodeClick"
       >
       </el-tree>
     </el-card>
@@ -21,7 +26,7 @@
         <span>按钮</span>
         <div style="float: right" @click="this.getHW"></div>
       </div>
-      <menuButton></menuButton>
+      <menuButton :parent-id="this.defauctCheckId" :parent-name="this.defauctCheckName" ref="child"></menuButton>
     </el-card>
 
     <!-- 目录 -->
@@ -165,6 +170,14 @@
             <template slot="prepend">Http://</template>
           </el-input>
         </el-form-item>
+          <el-form-item label="排序" prop="sort">
+          <el-input
+            type="number"
+            placeholder="数字越小越靠前"
+            v-model="temp.sort"
+          >
+          </el-input>
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false"> 取消 </el-button>
@@ -175,18 +188,6 @@
           确定
         </el-button>
       </div>
-    </el-dialog>
-    <!-- 确认删除 -->
-    <el-dialog
-      :title="textMap[dialogStatus]"
-      :visible.sync="dialogDelVisible"
-      width="30%"
-      >
-      <span>确定{{textMap[dialogStatus]}}吗?</span>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogDelVisible = false">取 消</el-button>
-        <el-button type="primary" @click="dialogDelVisible = false">确 定</el-button>
-      </span>
     </el-dialog>
   </div>
 </template>
@@ -217,6 +218,9 @@ export default {
       eCard_body: {
         width: "",
       },
+      defauctCheckId:"",
+      defauctCheckName:"",
+      dialogButtonFormVisible:false,
       list_menu: [],
       defaultProps: {
         children: "children",
@@ -259,7 +263,6 @@ export default {
       innerDirVisible: false, //内层dialog
       dialogFormVisible: false, //外层dialog
       innerVisible: false, //内层dialog
-      dialogDelVisible:false,//删除dialog
       rulesDir: {
         name: [
           { required: true, message: "目录名称不能为空", trigger: "blur" },
@@ -281,6 +284,7 @@ export default {
   },
   methods: {
     getHW() {
+      
       this.eBody_menu.height = window.innerHeight - 95 + "px";
       this.eBody_menu.width = window.innerWidtht - 210 + "px";
 
@@ -289,8 +293,19 @@ export default {
       console.log(eWidth, eHeigh);
       this.eCard_menu.width = eWidth * 0.2 + "px";
       this.eCard_body.width = eWidth * 0.8 - 20 + "px";
+      this.loadDataTree();
+    },
+    loadDataTree(){
+      this.getMenuList()
+    },
+    nodeClick(data,node){
+      if(data.level == 2){
+        this.defauctCheckId = data.id
+        this.defauctCheckName = data.name
+      }
     },
     renderContent(h, { node, data, store }) {
+      
       node.data._add = "";
       node.data._addIcon = "";
       node.data._remove = "";
@@ -328,7 +343,7 @@ export default {
               e.stopPropagation();
             }}
           >
-            <el-dropdown
+            <el-dropdown trigger="click"
               on-command={(command) => {
                 this.resetTemp();
                 //格式 id,parentId,level,action
@@ -358,17 +373,39 @@ export default {
                     this.dialogDirFormVisible = true;
                   } else {
                     //删除目录
-                      this.dialogStatus = "deleteDir";
-                      this.dialogDelFormVisible = true;
+                     this.$confirm('此操作将永久删除该目录, 是否继续?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                      }).then(() => {
+                        this.query.id = arry[0];
+                        this.deleteDirData()
+                      }).catch(() => {
+        
+                      });
                   }
                 }
                 if (arry[2] == "2") {
                   if (arry[3] == "add") {
-                    alert("添加按钮");
+                    this.defauctCheckId = arry[0];
+                    this.handleButtonCreate();
                   } else if (arry[3] == "edit") {
-                    alert(`编辑菜单`);
+                    this.query.id = arry[0];
+                    this.handleUpdate();
+                    this.dialogStatus = "editMenu";
+                    this.dialogTag = "menu";
+                    this.dialogFormVisible = true;
                   } else {
-                    alert(`删除菜单`);
+                     this.$confirm('此操作将永久删除该菜单, 是否继续?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                      }).then(() => {
+                        this.query.id = arry[0];
+                        this.deleteData()
+                      }).catch(() => {
+        
+                      });
                   }
                 }
               }}
@@ -468,6 +505,7 @@ export default {
           console.log(this.tempDir);
           createDir(this.tempDir).then(() => {
             this.dialogDirFormVisible = false;
+            this.loadDataTree()//刷新节点
             this.$notify({
               title: "成功",
               message: "创建成功",
@@ -490,6 +528,8 @@ export default {
         if (valid) {
           updateDir(this.tempDir).then(() => {
             this.dialogDirFormVisible = false;
+            this.loadDataTree()//刷新节点
+            getMenuList();
             this.$notify({
               title: "成功",
               message: "修改成功",
@@ -505,6 +545,7 @@ export default {
         if (valid) {
           createMenu(this.temp).then(() => {
             this.dialogFormVisible = false;
+                        this.loadDataTree()//刷新节点
             this.$notify({
               title: "成功",
               message: "创建成功",
@@ -517,16 +558,17 @@ export default {
     },
      handleUpdate() {
       this.listLoading = true;
-      getDir(this.query).then((response) => {
-        this.tempDir = response.data;
+      getMenu(this.query).then((response) => {
+        this.temp = response.data;
         this.listLoading = false;
       });
     },
     updateData() {
       this.$refs["dataForm"].validate((valid) => {
         if (valid) {
-          updateDir(this.temp).then(() => {
+          updateMenu(this.temp).then(() => {
             this.dialogFormVisible = false;
+            this.loadDataTree()//刷新节点
             this.$notify({
               title: "成功",
               message: "修改成功",
@@ -538,8 +580,32 @@ export default {
       });
     },
     deleteData() {
-
+      deleteMenu(this.query).then(()=>{
+        this.dialogDirFormVisible = false;
+            this.loadDataTree()//刷新节点
+            this.$notify({
+              title: "成功",
+              message: "删除成功",
+              type: "success",
+              duration: 2000,
+            });
+      })
     },
+    deleteDirData() {
+      deleteDir(this.query).then(()=>{
+        this.dialogDirFormVisible = false;
+            this.loadDataTree()//刷新节点
+            this.$notify({
+              title: "成功",
+              message: "删除成功",
+              type: "success",
+              duration: 2000,
+            });
+      })
+    },
+    handleButtonCreate() {
+              this.$refs.child.handleCreate();
+        },
   },
   created: function () {
     window.addEventListener("resize", this.getHeight);

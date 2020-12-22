@@ -215,9 +215,9 @@ export default {
       display: inline-block;
       position: relative;
       cursor: pointer;
-      height: 26px;
+      // height: 26px;
       line-height: 26px;
-      border: 1px solid #d8dce5;
+      border-bottom: 2px solid #d8dce5;
       color: #495060;
       background: #fff;
       padding: 0 8px;
@@ -231,9 +231,9 @@ export default {
         margin-right: 15px;
       }
       &.active {
-        background-color: #42b983;
-        color: #fff;
-        border-color: #42b983;
+        //background-color: #42b983;
+        color: rgb(64, 158, 255);
+        border-bottom-color: rgb(64, 158, 255);
         &::before {
           content: '';
           background: #fff;

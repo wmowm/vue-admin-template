@@ -10,22 +10,22 @@
       highlight-current-row
       class="tableBox"
     >
-      <el-table-column label="菜单ID">
+      <el-table-column label="菜单名称" width="120">
         <template slot-scope="scope">
-          {{ scope.row.parentId }}
+          {{parentName}}
         </template>
       </el-table-column>
-      <el-table-column align="center" label="按钮ID" width="95">
+      <el-table-column align="center" label="按钮ID">
         <template slot-scope="scope">
           {{ scope.row.id }}
         </template>
       </el-table-column>
-      <el-table-column label="按钮名称" align="center">
+      <el-table-column label="按钮名称" width="100">
         <template slot-scope="scope">
           <span>{{ scope.row.name }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="按钮图标" align="center">
+      <el-table-column label="按钮图标" width="80">
         <template slot-scope="scope">
           <i class="scope.row.icon"></i>
         </template>
@@ -35,38 +35,16 @@
           <span>{{ scope.row.url }}</span>
         </template>
       </el-table-column>
+            <el-table-column label="排序" align="center" width="80">
+        <template slot-scope="scope">
+          <span>{{ scope.row.sort }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" fixed="right" width="150">
         <template slot-scope="scope">
-          <el-button
-            type="primary"
-            size="mini"
-            @click="handleUpdate(scope.row)"
-          >
-            编辑
-          </el-button>
-          <el-popover placement="top" :ref="scope.$index">
-            <p>确定删除吗？</p>
-            <div style="text-align: right; margin: 0">
-              <el-button
-                size="mini"
-                type="text"
-                @click="scope._self.$refs[scope.$index].doClose()"
-                >取消</el-button
-              >
-              <el-button
-                type="text"
-                size="mini"
-                @click="
-                  scope._self.$refs[scope.$index].doClose();
-                  handleDelete(scope.row);
-                "
-                >确定</el-button
-              >
-            </div>
-            <el-button slot="reference" type="danger" size="mini"
-              >删除</el-button
+          <el-button type="primary" size="mini" @click="handleUpdate(scope.row)">编辑</el-button>
+          <el-button slot="reference" type="danger" size="mini" @click="handleDelete(scope.row)">删除</el-button
             >
-          </el-popover>
         </template>
       </el-table-column>
     </el-table>
@@ -117,7 +95,7 @@
         style="width: 400px; margin-left: 50px"
       >
         <el-form-item label="菜单ID" prop="parentId">
-          <el-input :disabled="true" v-model="temp.parentId" />
+          <el-input :disabled="true" v-model="this.parentId" />
         </el-form-item>
         <el-form-item label="按钮名称" prop="name">
           <el-input v-model="temp.name" />
@@ -139,6 +117,15 @@
             <template slot="prepend">Http://</template>
           </el-input>
         </el-form-item>
+        </el-form-item>
+          <el-form-item label="排序" prop="sort">
+          <el-input
+            type="number"
+            placeholder="数字越小越靠前"
+            v-model="temp.sort"
+          >
+          </el-input>
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false"> 取消 </el-button>
@@ -156,7 +143,7 @@
 
 
 <script>
-import { getMenuButtonList } from "@/api/menu";
+import { getMenuButtonList,createButton,getButton,updateButton,deleteButton } from "@/api/menu";
 
 import waves from "@/directive/waves"; // waves directive
 import { parseTime } from "@/utils";
@@ -176,6 +163,10 @@ export default {
       return statusMap[status];
     },
   },
+   props: {
+     parentId:String,
+     parentName:String,
+   },
   data() {
     return {
       elementIcons,
@@ -186,8 +177,9 @@ export default {
       listQuery: {
         pageIndex: 1,
         pageSize: 10,
-        title: undefined,
-        status: undefined,
+        title: '',
+        status: '',
+        parentId:''
         //sort: '+id'
       },
       temp: {
@@ -222,13 +214,15 @@ export default {
   },
   methods: {
     getList() {
-      console.log(this.listQuery);
-      this.listLoading = true;
-      getMenuButtonList(this.listQuery).then((response) => {
-        this.list = response.data;
-        this.total = response.total;
-        this.listLoading = false;
-      });
+      if(this.parentId != ""){
+        this.listLoading = true;
+        this.listQuery.parentId = this.parentId;
+        getMenuButtonList(this.listQuery).then((response) => {
+          this.list = response.data;
+          this.total = response.total;
+        });
+      }
+      this.listLoading = false;
     },
     handleFilter() {
       this.listQuery.pageIndex = 1;
@@ -241,18 +235,19 @@ export default {
       this.innerVisible = false;
       this.temp.icon = `el-icon-${text}`;
     },
-    // resetTemp() {
-    //   this.temp = {
-    //     id: undefined,
-    //     author: '',
-    //     remark: '',
-    //     timestamp: new Date(),
-    //     title: '',
-    //     status: '2',
-    //   }
-    // },
+    resetTemp() {
+      this.temp = {
+        id: "",
+        name: "",
+        icon: "",
+        level: "",
+        parentId: "",
+        url: "",
+        sort: "",
+      }
+    },
     handleCreate() {
-      //this.resetTemp()
+      this.resetTemp()
       this.dialogStatus = "create";
       this.dialogFormVisible = true;
       this.$nextTick(() => {
@@ -262,8 +257,10 @@ export default {
     createData() {
       this.$refs["dataForm"].validate((valid) => {
         if (valid) {
-          createUser(this.temp).then(() => {
+          this.temp.parentId = this.parentId;
+          createButton(this.temp).then(() => {
             this.dialogFormVisible = false;
+            this.getList();
             this.$notify({
               title: "成功",
               message: "创建成功",
@@ -275,7 +272,6 @@ export default {
       });
     },
     handleUpdate(row) {
-      console.log(row);
       this.temp = Object.assign({}, row); // copy obj
       this.temp.status = this.statusOptions[this.temp.status];
       this.dialogStatus = "update";
@@ -289,8 +285,9 @@ export default {
         if (valid) {
           const tempData = Object.assign({}, this.temp);
           console.log(tempData.timestamp);
-          updateUser(tempData).then(() => {
+          updateButton(tempData).then(() => {
             this.dialogFormVisible = false;
+            this.getList();
             this.$notify({
               title: "成功",
               message: "更新成功",
@@ -302,18 +299,34 @@ export default {
       });
     },
     handleDelete(row) {
-      console.log(row);
-      deleteUser({ id: row.id }).then(() => {
-        this.dialogFormVisible = false;
-        this.$notify({
-          title: "成功",
-          message: "删除成功",
-          type: "success",
-          duration: 2000,
-        });
-      });
+      this.$confirm('此操作将永久删除该菜单, 是否继续?', '提示', {
+                              confirmButtonText: '确定',
+                              cancelButtonText: '取消',
+                              type: 'warning'
+                            }).then(() => {
+                            deleteButton({ id: row.id }).then(() => {
+                                    this.dialogFormVisible = false;
+                                    this.getList();
+                                    this.$notify({
+                                      title: "成功",
+                                      message: "删除成功",
+                                      type: "success",
+                                      duration: 2000,
+                                    });
+                                  });
+                            }).catch(() => {
+              
+                            });
     },
   },
+  watch:{
+    parentId:{
+		handler:function(){
+			this.getList()
+		},
+		deep:true
+  },
+  }
 };
 </script>
 
